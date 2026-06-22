@@ -1,6 +1,7 @@
 import { Author } from "./author.entity";
 import { Category } from "./category.entity";
-import { Entity, Column, JoinColumn, JoinTable, ManyToMany, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Entity, Column, JoinColumn, JoinTable, ManyToMany, ManyToOne, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
+import { ReviewEntity } from "./review.entity";
 
 @Entity('books')
 export class Book {
@@ -24,4 +25,7 @@ export class Book {
     @ManyToOne(()=>Category,(category)=>category.books,{nullable:false, eager:true,onDelete:'RESTRICT'})
     @JoinColumn() // optional on OneToMany relations
     category: Category;
+
+    @OneToMany(()=>ReviewEntity,(review)=>review.book)
+    reviews: ReviewEntity[];
 }

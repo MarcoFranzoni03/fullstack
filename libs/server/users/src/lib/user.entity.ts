@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { UserRole } from './dto/user-role.enum.js';
+import { ReviewEntity } from '../../../books/src/lib/review.entity.js'
 
 @Entity('users')
 export class UserEntity {
@@ -21,5 +22,8 @@ export class UserEntity {
         default: UserRole.USER
     })
     role: UserRole;
+
+    @OneToMany(()=>ReviewEntity,(review)=>review.user)
+    reviews: ReviewEntity[];
 }
 

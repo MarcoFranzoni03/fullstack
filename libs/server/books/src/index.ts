@@ -11,3 +11,4 @@ export * from './lib/dto/update-category.dto';
 export * from './lib/interfaces/book-list-item.interface';
 export * from './lib/interfaces/category-list-item.interface';
 export * from './lib/interfaces/author-list-item.interface';
+export * from './lib/review.entity';

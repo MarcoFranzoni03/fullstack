@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, InternalServerErrorException, UnprocessableEntityException, BadRequestException, ServiceUnavailableException, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException, UnprocessableEntityException, BadRequestException, ServiceUnavailableException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { QueryFailedError, Repository, In, Not, ILike } from 'typeorm';
 import { Book } from './book.entity';
@@ -14,6 +14,10 @@ import { CreateAuthorDto } from './dto/create-author.dto';
 import { UpdateAuthorDto } from './dto/update-author.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { ReviewEntity } from './review.entity';
+import { CreateReviewDto } from './dto/create-review.dto';
+import { ReviewListItem } from './interfaces/review-list-item.interface';
+import { UserEntity } from '@server/users';
 
 type PgError = {
   code?: string;
@@ -36,7 +40,10 @@ export class OrgBooksService {
         private readonly categoryRepository: Repository<Category>,
 
         @InjectRepository(Address)
-        private readonly addressRepository: Repository<Address>
+        private readonly addressRepository: Repository<Address>,
+
+        @InjectRepository(ReviewEntity)
+        private readonly reviewRepository: Repository<ReviewEntity>
     ) {}
 
     async seed() {
@@ -184,7 +191,8 @@ export class OrgBooksService {
         const books = await this.bookRepository.find({
             relations: {
                 authors: true,
-                category: true
+                category: true,
+                reviews: true
             },
             order: {
                 title: 'ASC'
@@ -296,6 +304,7 @@ export class OrgBooksService {
             relations: {
                 authors: true,
                 category: true,
+                reviews: true
             }
         });
 
@@ -583,5 +592,121 @@ export class OrgBooksService {
         }
 
         await this.categoryRepository.remove(category);
+    }
+
+    async findReviewsByBookId(bookId: number): Promise<ReviewListItem[]> {
+        // 1. Usiamo find() per prendere tutte le recensioni di quel libro
+        // 2. Includiamo 'book.authors' nelle relazioni per non far crashare il map
+        const reviews = await this.reviewRepository.find({
+            where: {
+                book: { id: bookId }
+            },
+            relations: {
+                user: true,
+                book: {
+                    authors: true
+                }
+            }
+        });
+
+        // Se il libro non ha recensioni restituiamo un array vuoto [] 
+        // (A livello di API è meglio non lanciare un errore 404 se un libro non ha ancora commenti)
+        if (!reviews || reviews.length === 0) {
+            return [];
+        }
+
+        // 3. Mappiamo l'array di entità nell'array di ReviewListItem richiesto dal frontend
+        return reviews.map((review) => ({
+            id: review.id,
+            rating: review.rating,
+            comment: review.comment,
+            user: {
+                id: review.user.id,
+                email: review.user.email,
+            },
+            book: {
+                id: review.book.id,
+                title: review.book.title,
+                authors: review.book.authors.map((author) => ({
+                    id: author.id,
+                    firstName: author.firstName,
+                    lastName: author.lastName
+                }))
+            }
+        }));
+    }
+
+    async createReview(bookId: number, user: UserEntity, dto: CreateReviewDto): Promise<ReviewListItem> {
+        // 1. CONTROLLO PREVENTIVO: L'utente ha già recensito questo libro?
+        const existingReview = await this.reviewRepository.findOne({
+            where: {
+                book: { id: bookId },
+                user: { id: user.id }
+            }
+        });
+
+        if (existingReview) {
+            throw new ConflictException(`You have already reviewed this book. Use update if you want to change it.`);
+        }
+
+        // 2. Recupero il libro con i suoi autori per il mapping finale
+        const book = await this.bookRepository.findOne({
+            where: { id: bookId },
+            relations: ['authors'] 
+        });
+
+        if (!book) {
+            throw new NotFoundException(`Book ${bookId} not found`);
+        }
+
+        // 3. Creazione e salvataggio della recensione
+        const review = this.reviewRepository.create({
+            rating: dto.rating,
+            comment: dto.comment,
+            user,
+            book
+        });
+
+        const savedReview = await this.reviewRepository.save(review);
+
+        // 4. Risposta mappata per il frontend
+        return {
+            id: savedReview.id,
+            rating: savedReview.rating,
+            comment: savedReview.comment,
+            user: {
+                id: savedReview.user.id,
+                email: savedReview.user.email,
+            },
+            book: {
+                id: savedReview.book.id,
+                title: savedReview.book.title,
+                authors: savedReview.book.authors.map((author) => ({
+                    id: author.id,
+                    firstName: author.firstName,
+                    lastName: author.lastName
+                }))
+            }
+        };
+    }
+
+    async deleteReview(id: number, user: UserEntity): Promise<void> {
+        // 3. AGGIUNTO IL JOIN 'user', altrimenti review.user sarà undefined e il check fallirà
+        const review = await this.reviewRepository.findOne({
+            where: { id },
+            relations: ['user'] 
+        });
+
+        if (!review) {
+            throw new NotFoundException(`Review ${id} not found`);
+        }
+
+        if (review.user.id !== user.id) {
+            throw new ForbiddenException(
+                "Cannot delete another user's review"
+            );
+        }
+
+        await this.reviewRepository.remove(review);
     }
 }

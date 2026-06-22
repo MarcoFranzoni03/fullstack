@@ -2,10 +2,10 @@ import { Controller, Get, ParseIntPipe, Post, UseGuards, Param, Body, Validation
 import { OrgBooksService } from './books.service';
 import { ApiTags, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard, Roles, RolesGuard } from '@server/security';
-import { UserRole } from '@server/users';
 import { BookListItem } from './interfaces/book-list-item.interface';
 import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
+import { UserRole } from '@server/users';
 
 @ApiTags('Library APIs')
 @Controller('books')
