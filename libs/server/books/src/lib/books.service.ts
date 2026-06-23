@@ -17,7 +17,7 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 import { ReviewEntity } from './review.entity';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { ReviewListItem } from './interfaces/review-list-item.interface';
-import { UserEntity } from '@server/users';
+import { UserEntity, UserRole } from '@server/users';
 
 type PgError = {
   code?: string;
@@ -701,7 +701,7 @@ export class OrgBooksService {
             throw new NotFoundException(`Review ${id} not found`);
         }
 
-        if (review.user.id !== user.id) {
+        if ((review.user.id !== user.id) && (user.role !== UserRole.ADMIN)) {
             throw new ForbiddenException(
                 "Cannot delete another user's review"
             );

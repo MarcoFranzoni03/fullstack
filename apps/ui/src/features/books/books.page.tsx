@@ -6,9 +6,14 @@ import book_styles from '../css/books.module.css';
 import clsx from 'clsx';
 import { GiSecretBook } from "react-icons/gi";
 import { deleteBook } from './books.api';
+import { Link } from 'react-router-dom';
+import { RoleGuard } from '../auth/role.guard';
+import { fetchCurrentUser } from '../auth/auth.api';
+import { UserRole } from '../../../../../libs/server/users/src/lib/dto/user-role.enum';
 
 export function BooksPage() {
   const [books, setBooks] = useState<BookListItem[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -28,8 +33,15 @@ export function BooksPage() {
   }
 
   useEffect(() => {
-    fetchBooks()
-      .then(setBooks)
+    // 2. SCARICA IN PARALLELO LIBRI E UTENTE
+    Promise.all([
+      fetchBooks(),
+      fetchCurrentUser().catch(() => null) // Se l'utente non è loggato, fallisce silenziosamente e torna null
+    ])
+      .then(([booksData, userData]) => {
+        setBooks(booksData);
+        setCurrentUser(userData); // <-- 3. SALVA L'UTENTE NELLO STATO
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
@@ -77,14 +89,24 @@ export function BooksPage() {
                   <th className={book_styles.th}>Anno</th>
                   <th className={book_styles.th}>Categoria</th>
                   <th className={book_styles.th}>Autori</th>
-                  <th className={book_styles.th}>Azioni</th>
+                  {/* APPENDE QUI IL ROLEGUARD */}
+                  <RoleGuard user={currentUser} allowedRoles={[UserRole.ADMIN]}>
+                    <th className={book_styles.th}>Azioni</th>
+                  </RoleGuard>
                 </tr>
               </thead>
 
               <tbody>
                 {books.map((book) => (
                   <tr key={book.id} className={book_styles.row}>
-                    <td className={book_styles.titleCell}>{book.title}</td>
+                    <td className={book_styles.titleCell}>
+                      <Link 
+                        to={`/books/${book.id}`} 
+                        className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                      >
+                        {book.title}
+                      </Link>
+                    </td>
                     <td className={book_styles.td}>{book.publishedYear}</td>
                     <td className={book_styles.td}>
                       <span className={book_styles.badge}>
@@ -101,21 +123,24 @@ export function BooksPage() {
                             .join(', ')
                         : 'N/D'}
                     </td>
-                    <td className={book_styles.td}>
-                      <button 
-                        className={book_styles.secondaryButton}
-                        onClick={() => navigate(`/books/${book.id}/edit`)}>
+                    {/* AVVOLGI L'INTERA CELLA DELLE AZIONI CON IL ROLEGUARD */}
+                    <RoleGuard user={currentUser} allowedRoles={[UserRole.ADMIN]}>
+                      <td className={book_styles.td}>
+                        <button 
+                          className={book_styles.secondaryButton}
+                          onClick={() => navigate(`/books/${book.id}/edit`)}
+                        >
+                          Modifica
+                        </button>
 
-                        Modifica
-                      </button>
-
-                      <button 
-                        className={book_styles.dangerButton}
-                        onClick={() => handleDelete(book.id)}>
-
-                        Elimina
-                      </button>
-                    </td>
+                        <button 
+                          className={book_styles.dangerButton}
+                          onClick={() => handleDelete(book.id)}
+                        >
+                          Elimina
+                        </button>
+                      </td>
+                    </RoleGuard>
                   </tr>
                 ))}
               </tbody>

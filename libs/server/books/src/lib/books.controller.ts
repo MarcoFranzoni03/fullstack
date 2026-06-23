@@ -22,7 +22,7 @@ export class OrgBooksController {
 
   @Get()
   @UseGuards(JwtAuthGuard,RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN,UserRole.USER)
   @ApiBearerAuth()
   findAll(): Promise<BookListItem[]> {
     return this.orgBooksService.findAllBooks();
@@ -30,7 +30,7 @@ export class OrgBooksController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard,RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN,UserRole.USER)
   @ApiBearerAuth()
   findOne(@Param('id', ParseIntPipe) id:number): Promise<BookListItem> {
     return this.orgBooksService.findBookById(id);

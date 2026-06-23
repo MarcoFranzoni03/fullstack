@@ -15,6 +15,10 @@ import { EditAuthorPage } from '../features/authors/edit-author.page';
 import { CategoriesPage } from '../features/categories/categories.page';
 import { CreateCategoryPage } from '../features/categories/create-category.page';
 import { EditCategoryPage } from '../features/categories/edit-category.page';
+import { BookPage } from '../features/books/book.page';
+import { ProtectedRoleRoute } from '../features/auth/protected-role-route';
+import { CreateReviewPage } from '../features/reviews/create-review.page';
+import { UserRole } from '../../../../libs/server/users/src/lib/dto/user-role.enum';
 
 export function App() {
   return (
@@ -31,6 +35,7 @@ export function App() {
         }
       >
         <Route path="/books" element={<BooksPage />} />
+        <Route path="/books/:id" element={<BookPage />} />
         <Route path="/books/new" element={<CreateBookPage />} />
         <Route path="/books/:id/edit" element={<EditBookPage />} />
         <Route path="/authors" element={<AuthorsPage />} />
@@ -39,6 +44,14 @@ export function App() {
         <Route path="/categories" element={<CategoriesPage />} />
         <Route path="/categories/new" element={<CreateCategoryPage />} />
         <Route path="/categories/:id/edit" element={<EditCategoryPage />} />
+        <Route 
+          path="/books/:id/reviews/create" 
+          element={
+            <ProtectedRoleRoute allowedRoles={[UserRole.USER]}>
+              <CreateReviewPage />
+            </ProtectedRoleRoute>
+          } 
+        />
       </Route>
       
       <Route path="/home-module" element={<HomeModulePage />} />

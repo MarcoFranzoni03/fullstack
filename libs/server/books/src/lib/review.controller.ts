@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, UseGuards, ValidationPipe } from "@nestjs/common";
-import { CurrentUser, JwtAuthGuard } from "@server/security";
+import { CurrentUser, JwtAuthGuard, Roles, RolesGuard } from "@server/security";
 import { CreateReviewDto } from "./dto/create-review.dto";
-import { UserEntity } from "@server/users";
+import { UserEntity, UserRole } from "@server/users";
 import { OrgBooksService } from "./books.service";
 import { ApiBearerAuth, ApiBody, ApiTags } from "@nestjs/swagger";
 
@@ -11,7 +11,8 @@ export class ReviewController {
     constructor(private orgBooksService: OrgBooksService) {}
 
     @Get('book/:bookId')
-    @UseGuards(JwtAuthGuard)
+    @UseGuards(JwtAuthGuard,RolesGuard)
+    @Roles(UserRole.ADMIN,UserRole.USER)
     @ApiBearerAuth()
     findOne(@Param('bookId', ParseIntPipe) id: number) {
         return this.orgBooksService.findReviewsByBookId(id);
@@ -19,7 +20,8 @@ export class ReviewController {
 
     // 1. Modificato l'URL in ':bookId' e aggiunto ParseIntPipe
     @Post(':bookId')
-    @UseGuards(JwtAuthGuard) 
+    @UseGuards(JwtAuthGuard,RolesGuard)
+    @Roles(UserRole.USER)
     @ApiBearerAuth()
     @ApiBody({
         schema: {
@@ -51,7 +53,8 @@ export class ReviewController {
     }
 
     @Delete(':id')
-    @UseGuards(JwtAuthGuard)
+    @UseGuards(JwtAuthGuard,RolesGuard)
+    @Roles(UserRole.ADMIN,UserRole.USER)
     @ApiBearerAuth()
     delete(
         @Param('id', ParseIntPipe) id: number,
