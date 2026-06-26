@@ -19,6 +19,13 @@ import { BookPage } from '../features/books/book.page';
 import { ProtectedRoleRoute } from '../features/auth/protected-role-route';
 import { CreateReviewPage } from '../features/reviews/create-review.page';
 import { UserRole } from '../../../../libs/server/users/src/lib/dto/user-role.enum';
+import { MacroAreasPage } from '../features/research-macro-areas/areas.page';
+import { MacroAreaCreatePage } from '../features/research-macro-areas/create-area-page';
+import { MacroAreaUpdatePage } from '../features/research-macro-areas/edit-area.page';
+import { ScholarsPage } from '../features/scholars/scholars.page';
+import { CreateScholarPage } from '../features/scholars/create-scholar.page';
+import { EditScholarPage } from '../features/scholars/edit-scholar.page';
+import { ProfilePage } from '../features/profile/profile.page';
 
 export function App() {
   return (
@@ -51,6 +58,77 @@ export function App() {
               <CreateReviewPage />
             </ProtectedRoleRoute>
           } 
+        />
+        {/* 1. LISTA PRINCIPALE: Accessibile sia ad ADMIN che a SCHOLAR */}
+        <Route
+          path="/macro-areas"
+          element={
+            <ProtectedRoleRoute allowedRoles={[UserRole.ADMIN, UserRole.SCHOLAR]}>
+              <MacroAreasPage />
+            </ProtectedRoleRoute>
+          }
+        />
+
+        {/* 2. CREAZIONE: Accessibile SOLO all'ADMIN */}
+        <Route
+          path="/macro-areas/new"
+          element={
+            <ProtectedRoleRoute allowedRoles={[UserRole.ADMIN]}>
+              <MacroAreaCreatePage />
+            </ProtectedRoleRoute>
+          }
+        />
+
+        {/* 3. MODIFICA: Accessibile SOLO all'ADMIN */}
+        <Route
+          path="/macro-areas/:id/edit"
+          element={
+            <ProtectedRoleRoute allowedRoles={[UserRole.ADMIN]}>
+              <MacroAreaUpdatePage />
+            </ProtectedRoleRoute>
+          }
+        />
+
+        {/* =========================================================
+            ROTTE RICERCATORI (SCHOLARS) - ACCESSI GESTITI
+          ========================================================= */}
+        {/* 1. Lista completa dei ricercatori: accessibile sia ad Admin che a Scholar */}
+        <Route 
+          path="/scholars" 
+          element={
+            <ProtectedRoleRoute allowedRoles={[UserRole.ADMIN, UserRole.SCHOLAR]}>
+              <ScholarsPage />
+            </ProtectedRoleRoute>
+          } 
+        />
+
+        {/* 2. Creazione nuovo ricercatore: RISERVATA SOLO ALL'ADMIN */}
+        <Route 
+          path="/scholars/new" 
+          element={
+            <ProtectedRoleRoute allowedRoles={[UserRole.ADMIN]}>
+              <CreateScholarPage />
+            </ProtectedRoleRoute>
+          } 
+        />
+
+        {/* 3. Modifica ricercatore esistente: RISERVATA SOLO ALL'ADMIN */}
+        <Route 
+          path="/scholars/:id/edit" 
+          element={
+            <ProtectedRoleRoute allowedRoles={[UserRole.ADMIN]}>
+              <EditScholarPage />
+            </ProtectedRoleRoute>
+          } 
+        />
+
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoleRoute allowedRoles={[UserRole.ADMIN, UserRole.SCHOLAR, UserRole.USER]}>
+              <ProfilePage />
+            </ProtectedRoleRoute>
+          }
         />
       </Route>
       

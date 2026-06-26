@@ -1,0 +1,104 @@
+@import url('../styles.css');
+/* ===== MULTISELECT (STILE INLINE) ===== */
+.msContainer {
+    position: relative; 
+    display: inline-flex;
+    flex-direction: column;
+    vertical-align: top;
+}
+
+.msInput {
+    width: 250px !important;
+}
+
+.msInput::placeholder {
+    color: #475569 !important;
+    font-weight: 600;
+}
+
+/* Dropdown fluttuante dei suggerimenti */
+.msDropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 100;
+    min-width: 220px;
+    max-height: 240px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    margin-top: 6px;
+    padding: 4px;
+}
+
+/* Singola riga cliccabile nel dropdown */
+.msOption {
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #334155;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+
+.msOption:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+/* Contenitore dei chip selezionati (va sotto la barra dei filtri) */
+.msSelectedContainer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+    max-width: 400px;
+}
+
+/* Il singolo Badge/Chip dell'elemento selezionato */
+.msChip {
+    width: fit-content;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #9fb9ff; 
+    color: #1e3a8a;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid #bae6fd;
+}
+
+/* Bottone della "X" per rimuovere il chip */
+.msRemoveBtn {
+    background: transparent;
+    border: none;
+    color: #3857ac;
+    font-size: 14px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.1s ease;
+}
+
+.msRemoveBtn:hover {
+    color: var(--unibs-blue);;
+}
+
+/* Responsive: adatta il multiselect sui display piccoli */
+@media (max-width: 768px) {
+    .msContainer, .msInput, .msSelectedContainer {
+        width: 100%;
+        max-width: 100%;
+    }
+}

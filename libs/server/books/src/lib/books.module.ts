@@ -10,11 +10,27 @@ import { Category } from './category.entity';
 import { AuthorController } from './author.controller';
 import { ReviewEntity } from './review.entity';
 import { ReviewController } from './review.controller';
+import { ScholarController } from './scholar.controller';
+import { ResearchMacroAreaController } from './research-macro-area.controller';
+import { ScholarService } from './scholar.service';
+import { ScholarEntity } from './scholar.entity';
+import { ResearchMacroAreaEntity } from './research-macro-area.entity';
+import { ServerUsersModule } from '@server/users';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Address,Author,Book,Category,ReviewEntity])],
-  controllers: [OrgBooksController,CategoryController,AuthorController,ReviewController],
-  providers: [OrgBooksService],
+  imports: [
+    TypeOrmModule.forFeature([Address, Author, Book, Category, ReviewEntity, ScholarEntity, ResearchMacroAreaEntity]),
+    ServerUsersModule
+  ],
+  controllers: [
+    OrgBooksController,
+    CategoryController,
+    AuthorController,
+    ReviewController,
+    ScholarController,
+    ResearchMacroAreaController,
+  ],
+  providers: [OrgBooksService, ScholarService],
   exports: [OrgBooksService],
 })
 export class OrgBooksModule {}

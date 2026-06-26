@@ -55,4 +55,13 @@ export class UsersRepository {
         const result = await this.repository.delete(id);
         return (result.affected ?? 0) > 0;
     }
+
+    async updatePassword(id: number, passwordHash: string): Promise<UserEntity | null> {
+        const user = await this.findById(id);
+        if (!user) return null;
+
+        user.passwordHash = passwordHash;
+
+        return this.repository.save(user);
+    }
 }

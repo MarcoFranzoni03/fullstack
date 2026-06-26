@@ -36,3 +36,24 @@ export async function fetchCurrentUser() {
   return response.json();
 }
 
+export async function changePassword(payload: { oldPassword: string; newPassword: string }) {
+  const token = localStorage.getItem('access_token');
+
+  const response = await fetch(`${API_URL}/auth/change-password`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    // Se il backend risponde con un errore (es. vecchia password errata)
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(errData.message || 'Impossibile aggiornare la password.');
+  }
+
+  return response.json(); 
+}
+

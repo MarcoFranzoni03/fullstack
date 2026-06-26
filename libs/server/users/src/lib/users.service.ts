@@ -73,4 +73,17 @@ export class ServerUsersService {
             throw new NotFoundException(`User with id ${id} not found`);
         }
     }
+
+    async updatePassword(id: number, newPasswordPlain: string): Promise<void> {
+        // 1. Generiamo l'hash della nuova password
+        const newPasswordHash = await bcrypt.hash(newPasswordPlain, 10);
+        
+        // 2. Chiamiamo il nuovo metodo dedicato del repository
+        const updated = await this.usersRepository.updatePassword(id, newPasswordHash);
+        
+        if (!updated) {
+            throw new NotFoundException(`User with id ${id} not found`);
+        }
+    }
+    
 }

@@ -14,3 +14,7 @@ export * from './lib/interfaces/category-list-item.interface';
 export * from './lib/interfaces/author-list-item.interface';
 export * from './lib/review.entity';
 export * from './lib/interfaces/review-list-item.interface';
+export * from './lib/interfaces/research-macro-area-list-item.interface';
+export * from './lib/interfaces/scholar-list-item.interface';
+export * from './lib/dto/create-scholar.dto';
+export * from './lib/dto/update-scholar.dto';

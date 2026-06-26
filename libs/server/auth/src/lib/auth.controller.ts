@@ -1,10 +1,12 @@
-import { Controller, UseGuards, Post, Request, Body, ValidationPipe } from '@nestjs/common';
-import { ApiTags, ApiBody } from '@nestjs/swagger';
+import { Controller, UseGuards, Post, Request, Body, ValidationPipe, Patch } from '@nestjs/common';
+import { ApiTags, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { ServerAuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { AuthenticatedUser } from './interfaces/authenticated-user.interface';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { UserRole } from '@server/users';
+import { JwtAuthGuard } from '@server/security';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 type RequestWithUser = Request & {
   user: AuthenticatedUser;
@@ -47,4 +49,34 @@ export class ServerAuthController {
   register(@Body(ValidationPipe) dto: RegisterDto) {
     return this.serverAuthService.register(dto);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Patch('change-password')
+  @ApiBody({
+    description: 'Dati richiesti per aggiornare la password dell\'utente corrente',
+    schema: {
+      type: 'object',
+      properties: {
+        oldPassword: { 
+          type: 'string', 
+          example: 'Password1!', 
+          description: 'La password attualmente in uso' 
+        },
+        newPassword: { 
+          type: 'string', 
+          example: 'NuovaPassword123!', 
+          description: 'La nuova password (minimo 8 caratteri)' 
+        }
+      },
+      required: ['oldPassword', 'newPassword'],
+    },
+  })
+  changePassword(
+    @Request() req: RequestWithUser,
+    @Body(ValidationPipe) dto: ChangePasswordDto
+  ) {
+    return this.serverAuthService.changePassword(req.user.id, dto);
+  }
+
 }

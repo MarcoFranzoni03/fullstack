@@ -18,6 +18,10 @@ import { ReviewEntity } from './review.entity';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { ReviewListItem } from './interfaces/review-list-item.interface';
 import { UserEntity, UserRole } from '@server/users';
+import { ResearchMacroAreaEntity } from './research-macro-area.entity';
+import { ResearchMacroAreaListItem } from './interfaces/research-macro-area-list-item.interface';
+import { CreateResearchMacroAreaDto } from './dto/create-research-macro-area.dto';
+import { UpdateResearchMacroAreaDto } from './dto/update-research-macro-area.dto';
 
 type PgError = {
   code?: string;
@@ -43,7 +47,10 @@ export class OrgBooksService {
         private readonly addressRepository: Repository<Address>,
 
         @InjectRepository(ReviewEntity)
-        private readonly reviewRepository: Repository<ReviewEntity>
+        private readonly reviewRepository: Repository<ReviewEntity>,
+
+        @InjectRepository(ResearchMacroAreaEntity)
+        private readonly researchMacroAreaRepository: Repository<ResearchMacroAreaEntity>
     ) {}
 
     async seed() {
@@ -708,5 +715,79 @@ export class OrgBooksService {
         }
 
         await this.reviewRepository.remove(review);
+    }
+
+    // 1. FIND ALL (Recupera tutte le aree con gli scholar affiliati)
+    async findAllResearchMacroAreas(): Promise<ResearchMacroAreaListItem[]> {
+        return this.researchMacroAreaRepository.find({
+        relations: ['scholars'], // Carica la relazione N:N invertita
+        order: { name: 'ASC' }   // Ordine alfabetico comodo per le liste
+        });
+    }
+
+    // 2. FIND BY ID (Dettaglio di una singola macro area)
+    async findResearchMacroAreaById(id: number): Promise<ResearchMacroAreaListItem> {
+        const area = await this.researchMacroAreaRepository.findOne({
+        where: { id },
+        relations: ['scholars']
+        });
+
+        if (!area) {
+        throw new NotFoundException(`Area di ricerca con ID ${id} non trovata.`);
+        }
+
+        return area;
+    }
+
+    // 3. CREATE (Creazione di una nuova area)
+    async createResearchMacroArea(dto: CreateResearchMacroAreaDto): Promise<ResearchMacroAreaListItem> {
+        // Gestiamo il vincolo unique sul nome per evitare crash generici del DB
+        const existingArea = await this.researchMacroAreaRepository.findOne({ where: { name: dto.name } });
+        if (existingArea) {
+        throw new ConflictException(`L'area di ricerca "${dto.name}" esiste già.`);
+        }
+
+        const newArea = this.researchMacroAreaRepository.create({
+        name: dto.name,
+        scholars: [] // Inizializziamo l'array vuoto per mappare l'interfaccia
+        });
+
+        return this.researchMacroAreaRepository.save(newArea);
+    }
+
+    // 4. UPDATE (Modifica del nome dell'area)
+    async updateResearchMacroArea(id: number, dto: UpdateResearchMacroAreaDto): Promise<ResearchMacroAreaListItem> {
+        const area = await this.researchMacroAreaRepository.findOne({
+        where: { id },
+        relations: ['scholars']
+        });
+
+        if (!area) {
+        throw new NotFoundException(`Area di ricerca con ID ${id} non trovata.`);
+        }
+
+        if (dto.name) {
+        // Controllo duplicati anche in fase di update
+        const existingArea = await this.researchMacroAreaRepository.findOne({ where: { name: dto.name } });
+        if (existingArea && existingArea.id !== id) {
+            throw new ConflictException(`Un'altra area di ricerca si chiama già "${dto.name}".`);
+        }
+        area.name = dto.name;
+        }
+
+        return this.researchMacroAreaRepository.save(area);
+    }
+
+    // 5. DELETE (Cancellazione dell'area)
+    async deleteResearchMacroArea(id: number): Promise<void> {
+        const area = await this.researchMacroAreaRepository.findOne({ where: { id } });
+        
+        if (!area) {
+        throw new NotFoundException(`Area di ricerca con ID ${id} non trovata.`);
+        }
+
+        // Rimuovendo l'area, TypeORM pulirà AUTOMATICAMENTE tutte le righe 
+        // corrispondenti dentro la tabella di giunzione 'areas_scholars' (o scholar_research_areas)
+        await this.researchMacroAreaRepository.remove(area);
     }
 }
