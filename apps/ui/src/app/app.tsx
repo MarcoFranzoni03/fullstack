@@ -26,6 +26,9 @@ import { ScholarsPage } from '../features/scholars/scholars.page';
 import { CreateScholarPage } from '../features/scholars/create-scholar.page';
 import { EditScholarPage } from '../features/scholars/edit-scholar.page';
 import { ProfilePage } from '../features/profile/profile.page';
+import { ResearchProjectsPage } from '../features/research-projects/projects.page';
+import { CreateResearchProjectPage } from '../features/research-projects/create-project.page';
+import { EditResearchProjectPage } from '../features/research-projects/edit-project.page';
 
 export function App() {
   return (
@@ -118,6 +121,39 @@ export function App() {
           element={
             <ProtectedRoleRoute allowedRoles={[UserRole.ADMIN]}>
               <EditScholarPage />
+            </ProtectedRoleRoute>
+          } 
+        />
+
+        {/* =========================================================
+            ROTTE PROGETTI DI RICERCA (RESEARCH PROJECTS)
+           ========================================================= */}
+        {/* 1. Lista completa dei progetti: accessibile sia ad Admin che a Scholar */}
+        <Route 
+          path="/research-projects" 
+          element={
+            <ProtectedRoleRoute allowedRoles={[UserRole.ADMIN, UserRole.SCHOLAR]}>
+              <ResearchProjectsPage />
+            </ProtectedRoleRoute>
+          } 
+        />
+
+        {/* 2. Creazione nuovo progetto: RISERVATA SOLO ALL'ADMIN */}
+        <Route 
+          path="/research-project/new" 
+          element={
+            <ProtectedRoleRoute allowedRoles={[UserRole.ADMIN]}>
+              <CreateResearchProjectPage />
+            </ProtectedRoleRoute>
+          } 
+        />
+
+        {/* 3. Modifica progetto esistente: RISERVATA SOLO ALL'ADMIN */}
+        <Route 
+          path="/research-project/:id/edit" 
+          element={
+            <ProtectedRoleRoute allowedRoles={[UserRole.ADMIN]}>
+              <EditResearchProjectPage />
             </ProtectedRoleRoute>
           } 
         />

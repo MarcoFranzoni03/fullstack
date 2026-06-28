@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, InternalServerErrorException, UnprocessableEntityException, BadRequestException, ServiceUnavailableException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository, In, Not, ILike } from 'typeorm';
+import { QueryFailedError, Repository, In, Not, ILike, Raw } from 'typeorm';
 import { Book } from './book.entity';
 import { Author } from './author.entity';
 import { Address } from './address.entity';
@@ -22,6 +22,11 @@ import { ResearchMacroAreaEntity } from './research-macro-area.entity';
 import { ResearchMacroAreaListItem } from './interfaces/research-macro-area-list-item.interface';
 import { CreateResearchMacroAreaDto } from './dto/create-research-macro-area.dto';
 import { UpdateResearchMacroAreaDto } from './dto/update-research-macro-area.dto';
+import { ResearchProjectEntity } from './research-project.entity';
+import { ResearchProjectListItem } from './interfaces/research-project-list-item.interface';
+import { CreateResearchProjectDto } from './dto/create-research-project.dto';
+import { UpdateResearchProjectDto } from './dto/update-research-project.dto';
+import { ScholarEntity } from './scholar.entity';
 
 type PgError = {
   code?: string;
@@ -50,7 +55,13 @@ export class OrgBooksService {
         private readonly reviewRepository: Repository<ReviewEntity>,
 
         @InjectRepository(ResearchMacroAreaEntity)
-        private readonly researchMacroAreaRepository: Repository<ResearchMacroAreaEntity>
+        private readonly researchMacroAreaRepository: Repository<ResearchMacroAreaEntity>,
+
+        @InjectRepository(ResearchProjectEntity)
+        private readonly researchProjectRepository: Repository<ResearchProjectEntity>,
+
+        @InjectRepository(ScholarEntity)
+        private readonly scholarRepository: Repository<ScholarEntity>
     ) {}
 
     async seed() {
@@ -789,5 +800,188 @@ export class OrgBooksService {
         // Rimuovendo l'area, TypeORM pulirà AUTOMATICAMENTE tutte le righe 
         // corrispondenti dentro la tabella di giunzione 'areas_scholars' (o scholar_research_areas)
         await this.researchMacroAreaRepository.remove(area);
+    }
+
+    async findAllResearchProjects(filters?: { 
+        title?: string; 
+        acronym?: string; 
+        year?: number;
+        scholarId?: number;
+    }): Promise<ResearchProjectListItem[]> {
+        
+        // Creiamo un QueryBuilder esplicito per l'entità dei progetti
+        const query = this.researchProjectRepository.createQueryBuilder('project')
+            // Facciamo le JOIN esplicite caricando le relazioni annidate
+            .leftJoinAndSelect('project.scholars', 'scholar')
+            .leftJoinAndSelect('scholar.user', 'user')
+            .leftJoinAndSelect('scholar.research_macro_areas', 'macro_area');
+
+        // 1. Filtro parziale sul Titolo
+        if (filters?.title) {
+            query.andWhere('project.title ILIKE :title', { title: `%${filters.title}%` });
+        }
+
+        // 2. Filtro parziale sull'Acronimo
+        if (filters?.acronym) {
+            query.andWhere('project.acronym ILIKE :acronym', { acronym: `%${filters.acronym}%` });
+        }
+
+        // 3. Filtro per Anno di Attività
+        if (filters?.year) {
+            query.andWhere('EXTRACT(YEAR FROM project.startDate) <= :year', { year: filters.year })
+                .andWhere('EXTRACT(YEAR FROM project.endDate) >= :year', { year: filters.year });
+        }
+
+        // 4. Filtro sull'ID dello Scholar (Risolve il bug del tablePath!)
+        if (filters?.scholarId) {
+            // Filtriamo cercando se tra gli scholar del progetto c'è quello richiesto
+            query.andWhere('scholar.id = :scholarId', { scholarId: filters.scholarId });
+        }
+
+        // Ordiniamo per ID del progetto
+        query.orderBy('project.id', 'ASC');
+
+        const projects = await query.getMany();
+
+        if (!projects || projects.length === 0) {
+            throw new NotFoundException(`Nessun progetto di ricerca trovato con i criteri specificati`);
+        }
+
+        // Convertiamo l'output usando la tua funzione helper
+        return projects.map(project => this.mapToListItem(project));
+    }
+
+    // 2. FIND BY ID (Dettaglio di un singolo progetto di ricerca convertito per il frontend)
+    async findResearchProjectById(id: number): Promise<ResearchProjectListItem> {
+        const project = await this.researchProjectRepository.findOne({
+            where: { id },
+            relations: {
+                scholars: {
+                    user: true,
+                    research_macro_areas: true
+                }
+            }
+        });
+
+        if (!project) {
+            throw new NotFoundException(`Progetto di ricerca con ID ${id} non trovato.`);
+        }
+
+        // Convertiamo il singolo oggetto
+        return this.mapToListItem(project);
+    }
+
+    // 3. CREATE (Creazione di un nuovo progetto)
+    async createResearchProject(dto: CreateResearchProjectDto): Promise<ResearchProjectListItem> {
+        const existingProject = await this.researchProjectRepository.findOne({ where: { acronym: dto.acronym } });
+        if (existingProject) {
+            throw new ConflictException(`Un progetto con acronimo "${dto.acronym}" esiste già.`);
+        }
+
+        // Recuperiamo gli scholar reali dal DB
+        const scholars = await this.scholarRepository.find({
+            where: { id: In(dto.scholarIds) }
+        });
+
+        if (scholars.length === 0) {
+            throw new BadRequestException("Nessun ricercatore valido trovato per gli ID forniti.");
+        }
+
+        const newProject = this.researchProjectRepository.create({
+            title: dto.title,
+            acronym: dto.acronym,
+            budget: dto.budget,
+            startDate: new Date(dto.startDate),
+            endDate: new Date(dto.endDate),
+            scholars: scholars // Aggancio automatico alla tabella pivot
+        });
+
+        await this.researchProjectRepository.save(newProject);
+        
+        // Ritorniamo il progetto ricaricato e formattato tramite findResearchProjectById
+        return this.findResearchProjectById(newProject.id);
+    }
+
+    // 4. UPDATE (Modifica dei dati del progetto e ricalcolo della relazione N:N)
+    async updateResearchProject(id: number, dto: UpdateResearchProjectDto): Promise<ResearchProjectListItem> {
+        const project = await this.researchProjectRepository.findOne({
+            where: { id },
+            relations: { scholars: true } // Ci servono gli scholar attuali per sovrascriverli
+        });
+
+        if (!project) {
+            throw new NotFoundException(`Progetto di ricerca con ID ${id} non trovato.`);
+        }
+
+        // Controllo univocità acronimo
+        if (dto.acronym) {
+            const existingProject = await this.researchProjectRepository.findOne({ where: { acronym: dto.acronym } });
+            if (existingProject && existingProject.id !== id) {
+                throw new ConflictException(`Un altro progetto usa già l'acronimo "${dto.acronym}".`);
+            }
+            project.acronym = dto.acronym;
+        }
+
+        if (dto.title !== undefined) project.title = dto.title;
+        if (dto.budget !== undefined) project.budget = dto.budget;
+        if (dto.startDate !== undefined) project.startDate = new Date(dto.startDate);
+        if (dto.endDate !== undefined) project.endDate = new Date(dto.endDate);
+
+        // Gestione degli Scholar
+        if (dto.scholarIds !== undefined) {
+            if (dto.scholarIds.length > 0) {
+                const newScholars = await this.scholarRepository.find({
+                    where: { id: In(dto.scholarIds) }
+                });
+                project.scholars = newScholars;
+            } else {
+                project.scholars = [];
+            }
+        }
+
+        await this.researchProjectRepository.save(project);
+        
+        return this.findResearchProjectById(project.id);
+    }
+
+    // 5. DELETE (Cancellazione del progetto)
+    async deleteResearchProject(id: number): Promise<void> {
+        const project = await this.researchProjectRepository.findOne({ where: { id } });
+        
+        if (!project) {
+            throw new NotFoundException(`Progetto di ricerca con ID ${id} non trovato.`);
+        }
+
+        await this.researchProjectRepository.remove(project);
+    }
+
+    // 🌟 HELPER PRIVATO: Risolve il problema del tipo 'Date' -> 'string' e adegua l'oggetto all'interfaccia
+    private mapToListItem(project: ResearchProjectEntity): ResearchProjectListItem {
+        return {
+            id: project.id,
+            title: project.title,
+            acronym: project.acronym,
+            budget: project.budget ? Number(project.budget) : undefined,
+            // Tagliamo la stringa ISO per ottenere il formato YYYY-MM-DD richiesto dagli input di tipo date
+            startDate: project.startDate instanceof Date 
+                ? project.startDate.toISOString().split('T')[0] 
+                : String(project.startDate),
+            endDate: project.endDate instanceof Date 
+                ? project.endDate.toISOString().split('T')[0] 
+                : String(project.endDate),
+            scholars: (project.scholars || []).map((scholar: any) => ({
+                id: scholar.id,
+                universityDepartment: scholar.universityDepartment,
+                user: {
+                    id: scholar.user?.id,
+                    name: scholar.user?.name,
+                    email: scholar.user?.email,
+                },
+                research_macro_areas: (scholar.research_macro_areas || []).map((area: any) => ({
+                    id: area.id,
+                    name: area.name,
+                })),
+            })),
+        };
     }
 }

@@ -24,7 +24,7 @@ export class ScholarService {
     async findAllScholars(): Promise<ScholarListItem[]> {
         return this.scholarRepository.find({
         // Carichiamo l'utente base e l'array delle macro aree associate
-        relations: ['user', 'research_macro_areas'],
+        relations: ['user', 'research_macro_areas', 'research_projects'],
         // Opzionale: puoi ordinare i risultati per ID o per nome dell'utente
         order: {
             id: 'ASC'
@@ -36,7 +36,7 @@ export class ScholarService {
     async findScholarById(id: number): Promise<ScholarListItem> {
         const scholar = await this.scholarRepository.findOne({
         where: { id },
-        relations: ['user', 'research_macro_areas']
+        relations: ['user', 'research_macro_areas', 'research_projects']
         });
 
         // Se non lo trova, lanciamo un'eccezione standard di NestJS che si traduce in un 404 HTTP

@@ -1,6 +1,7 @@
 import { UserEntity } from '@server/users';
 import { Column, Entity, JoinColumn, JoinTable, ManyToMany, OneToOne, PrimaryColumn } from 'typeorm';
 import { ResearchMacroAreaEntity } from './research-macro-area.entity';
+import { ResearchProjectEntity } from './research-project.entity';
 
 @Entity('scholars')
 export class ScholarEntity {
@@ -26,6 +27,8 @@ export class ScholarEntity {
     })
     research_macro_areas: ResearchMacroAreaEntity[];
 
+    @ManyToMany(() => ResearchProjectEntity, (research_project) => research_project.scholars)
+    research_projects: ResearchProjectEntity[];
 }
 
 

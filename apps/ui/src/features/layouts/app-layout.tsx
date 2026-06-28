@@ -40,6 +40,9 @@ export function AppLayout() {
           <RoleGuard user={user} allowedRoles={[UserRole.ADMIN,UserRole.SCHOLAR]}>
             <button onClick={() => navigate('/scholars')}>Ricercatori</button>
           </RoleGuard>
+          <RoleGuard user={user} allowedRoles={[UserRole.ADMIN,UserRole.SCHOLAR]}>
+            <button onClick={() => navigate('/research-projects')}>Progetti</button>
+          </RoleGuard>
           
           <div className={styles.userSection}>
             <button

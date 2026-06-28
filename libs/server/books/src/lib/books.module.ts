@@ -16,11 +16,22 @@ import { ScholarService } from './scholar.service';
 import { ScholarEntity } from './scholar.entity';
 import { ResearchMacroAreaEntity } from './research-macro-area.entity';
 import { ServerUsersModule } from '@server/users';
+import { ResearchProjectController } from './research-project.controller';
+import { ResearchProjectEntity } from './research-project.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Address, Author, Book, Category, ReviewEntity, ScholarEntity, ResearchMacroAreaEntity]),
-    ServerUsersModule
+    TypeOrmModule.forFeature([
+      Address,
+      Author,
+      Book,
+      Category,
+      ReviewEntity,
+      ScholarEntity,
+      ResearchMacroAreaEntity,
+      ResearchProjectEntity
+    ]),
+    ServerUsersModule,
   ],
   controllers: [
     OrgBooksController,
@@ -29,6 +40,7 @@ import { ServerUsersModule } from '@server/users';
     ReviewController,
     ScholarController,
     ResearchMacroAreaController,
+    ResearchProjectController,
   ],
   providers: [OrgBooksService, ScholarService],
   exports: [OrgBooksService],

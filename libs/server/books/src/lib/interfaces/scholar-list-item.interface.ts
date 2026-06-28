@@ -13,4 +13,9 @@ export interface ScholarListItem {
     id: number;
     name: string;
   }[];
+  research_projects: {
+    id: number;
+    title: string;
+    acronym: string;
+  }[];
 }

@@ -18,3 +18,6 @@ export * from './lib/interfaces/research-macro-area-list-item.interface';
 export * from './lib/interfaces/scholar-list-item.interface';
 export * from './lib/dto/create-scholar.dto';
 export * from './lib/dto/update-scholar.dto';
+export * from './lib/interfaces/research-project-list-item.interface';
+export * from './lib/dto/create-research-project.dto';
+export * from './lib/dto/update-research-project.dto';
